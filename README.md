@@ -6,10 +6,6 @@
 * Install jq - https://github.com/edenhill/kcat
 
 
-https://www.foodora.se/en/restaurant/o4ep/bella-pizza-by-foodle-city
-https://www.foodora.se/en/restaurant/nq4i/4-corners-pizza-ostermalmshallen
-
-
 ## Part 1
 
 Set up Kafka and MySQL
@@ -67,3 +63,12 @@ docker compose -f docker-compose-orders.yml up -d
 ```bash
 kcat -C -b localhost:29092 -t orders
 ```
+
+
+## Extra
+
+If I get time:
+
+* Update to use Swedish pizzas 
+    * https://www.foodora.se/en/restaurant/o4ep/bella-pizza-by-foodle-city
+    * https://www.foodora.se/en/restaurant/nq4i/4-corners-pizza-ostermalmshallen
