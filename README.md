@@ -1,5 +1,10 @@
 # Pizza Shop Workshop
 
+## Pre Requisites
+
+* Install kcat - https://docs.confluent.io/platform/current/app-development/kafkacat-usage.html
+* Install jq - https://github.com/edenhill/kcat
+
 
 https://www.foodora.se/en/restaurant/o4ep/bella-pizza-by-foodle-city
 https://www.foodora.se/en/restaurant/nq4i/4-corners-pizza-ostermalmshallen
@@ -40,16 +45,20 @@ LIMIT 10;
 
 ## Part 2
 
-Orders Service Simulator
+Let's have a look at the Orders Service Simulator
 
 ```bash
 pygmentize orders-service/multiseeder.py | less
 ```
 
+And its accompanying Dockerfile and docker-compose files:
+
 ```bash
 pygmentize orders-service/Dockerfile
+pygmentize docker-compose-orders.yml | less
 ```
 
+Now let's connect the simulator to our estate:
 
 ```bash
 docker compose -f docker-compose-orders.yml up -d
