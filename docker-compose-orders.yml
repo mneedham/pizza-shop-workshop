@@ -1,0 +1,15 @@
+version: "3"
+services:
+  orders-service:
+    build: orders-service
+    restart: unless-stopped
+    container_name: orders-service
+    environment:
+      - MYSQL_SERVER=mysql
+      - KAFKA_BROKER_HOSTNAME=kafka
+      - KAFKA_BROKER_PORT=9092
+    networks:
+      - pizza-shop
+networks:
+  pizza-shop:
+    name: pizza-shop
