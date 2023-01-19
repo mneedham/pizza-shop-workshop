@@ -1,2 +1,1 @@
-# pizza-shop-workshop
-# pizza-shop-workshop
+# Pizza Shop Workshop
