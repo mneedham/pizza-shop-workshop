@@ -5,6 +5,12 @@
 * Install kcat - https://docs.confluent.io/platform/current/app-development/kafkacat-usage.html
 * Install jq - https://github.com/edenhill/kcat
 
+I'm using Pygmentize to view each of the files, but you can just view them in an editor.
+You can install Pygmentize by running the following:
+
+```bash
+pip install Pygments
+```
 
 ## Part 1
 
@@ -61,8 +67,64 @@ docker compose -f docker-compose-orders.yml up -d
 ```
 
 ```bash
-kcat -C -b localhost:29092 -t orders
+kcat -C -b localhost:29092 -t orders | jq -c
+kcat -C -b localhost:29092 -t orders -c1 | jq
 ```
+
+## Part 3
+
+Now let's get this data into Apache Pinot.
+
+View the schema:
+
+```bash
+pygmentize pinot/config/orders/schema.json | less
+```
+
+View the table config:
+
+```bash
+pygmentize pinot/config/orders/table.json | less
+```
+
+Add Pinot:
+
+```bash
+docker compose -f docker-compose-pinot.yml up -d
+```
+
+Create the table:
+
+```bash
+docker run \
+  -v $PWD/pinot/config:/config \
+  --network pizza-shop \
+  apachepinot/pinot:0.11.0-arm64 \
+  AddTable \
+  -schemaFile /config/orders/schema.json \
+  -tableConfigFile /config/orders/table.json \
+  -controllerHost pinot-controller \
+  -exec
+```
+
+Navigate to the Pinot UI at http://localhost:9000/. 
+Let's run some queries:
+
+```sql
+select ts, id, price, productsOrdered, totalQuantity, userId
+from orders 
+order by ts DESC
+limit 10
+```
+
+```sql
+select count(*), sum(price)
+from orders 
+WHERE ts > ago('PT1M')
+order by ts DESC
+limit 10
+```
+
 
 
 ## Extra
