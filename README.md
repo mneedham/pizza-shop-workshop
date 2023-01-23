@@ -44,6 +44,27 @@ FROM pizzashop.users
 LIMIT 10;
 ```
 
+Create an orders topic:
+
+```bash
+docker exec -it kafka \
+  kafka-topics \
+  --create \
+  --bootstrap-server localhost:9092 \
+  --topic orders \
+  --partitions 5
+```
+
+```bash
+kcat -L -b localhost:29092 -t orders4
+```
+
+```bash
+docker exec -it kafka kafka-run-class kafka.tools.GetOffsetShell \
+  --broker-list localhost:9092 \
+  --topic orders
+```
+
 
 ## Part 2
 
