@@ -55,6 +55,8 @@ docker exec -it kafka \
   --partitions 5
 ```
 
+Metadata for that topic:
+
 ```bash
 kcat -L -b localhost:29092 -t orders4
 ```
