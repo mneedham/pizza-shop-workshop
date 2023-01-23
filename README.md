@@ -127,16 +127,27 @@ limit 10
 
 ## Part 4
 
-Now let's add a dashboard populated by Pinot queries.
+Now let's add a Streamlit dashboard populated by Pinot queries.
 
 ```bash
 docker compose -f docker-compose-dashboard.yml up -d
 ```
 
-Navigate to:
+Let's first look at the basic dashboard:
 
-* http://localhost:8501 to see the basic dashboard
-* http://localhost:8501 to see the auto-refreshing dashboard
+```bash
+pygmentize streamlit/app_basic.py
+```
+
+Navigate to http://localhost:8501 to see the basic dashboard
+
+And now the auto refreshing dashboard:
+
+```bash
+pygmentize streamlit/app.py
+```
+
+Navigate to http://localhost:8501 to see the auto-refreshing dashboard
 
 
 ## Extra
