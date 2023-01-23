@@ -62,7 +62,8 @@ kcat -L -b localhost:29092 -t orders4
 ```
 
 ```bash
-docker exec -it kafka kafka-run-class \
+docker exec -it kafka \
+  kafka-run-class \
   kafka.tools.GetOffsetShell \
   --broker-list localhost:9092 \
   --topic orders
