@@ -7,6 +7,13 @@ import plotly.express as px
 import plotly.graph_objects as go 
 import os
 
+mapping = {
+    "1 hour": {"period": "PT60M", "granularity": "minute"},
+    "30 minutes": {"period": "PT30M", "granularity": "minute"},
+    "10 minutes": {"period": "PT10M", "granularity": "second"},
+    "5 minutes": {"period": "PT5M", "granularity": "second"}
+}
+
 pinot_host=os.environ.get("PINOT_SERVER", "pinot-broker")
 pinot_port=os.environ.get("PINOT_PORT", 8099)
 conn = connect(pinot_host, pinot_port)
@@ -26,11 +33,19 @@ if not "sleep_time" in st.session_state:
 if not "auto_refresh" in st.session_state:
     st.session_state.auto_refresh = True
 
-auto_refresh = st.checkbox('Auto Refresh?', st.session_state.auto_refresh)
 
-if auto_refresh:
-    number = st.number_input('Refresh rate in seconds', value=st.session_state.sleep_time)
-    st.session_state.sleep_time = number
+with st.expander("Configure Dashboard", expanded=True):
+    left, right = st.columns(2)
+
+    with left:
+        auto_refresh = st.checkbox('Auto Refresh?', st.session_state.auto_refresh)
+
+        if auto_refresh:
+            number = st.number_input('Refresh rate in seconds', value=st.session_state.sleep_time)
+            st.session_state.sleep_time = number
+
+    with right:
+            time_ago = st.radio("Time period to cover", mapping.keys(), horizontal=True, key="time_ago")
 
 curs = conn.cursor()
 
@@ -53,13 +68,13 @@ if pinot_available:
            sum(price) FILTER(WHERE  ts > ago('PT1M')) AS total1Min,
            sum(price) FILTER(WHERE  ts <= ago('PT1M') AND ts > ago('PT2M')) AS total1Min2Min
     from orders 
-    where ts > ago('PT2M')
+    where ts > ago(%(timeAgo)s)
     limit 1
     """
-    curs.execute(query)
+    curs.execute(query, {"timeAgo": mapping[time_ago]["period"]})
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
-    st.subheader("Orders in the last minute")
+    st.subheader(f"Orders in the last {time_ago}")
 
     metric1, metric2, metric3 = st.columns(3)
 
@@ -92,17 +107,17 @@ if pinot_available:
     )
 
     query = """
-    select ToDateTime(DATETRUNC('minute', ts), 'yyyy-MM-dd HH:mm:ss') AS dateMin, 
+    select ToDateTime(DATETRUNC(%(granularity)s, ts), 'yyyy-MM-dd HH:mm:ss') AS dateMin, 
         count(*) AS orders, 
         sum(price) AS revenue
     from orders 
-    where ts > ago('PT1H')
+    where ts > ago(%(timeAgo)s)
     group by dateMin
     order by dateMin desc
     LIMIT 10000
     """
 
-    curs.execute(query)
+    curs.execute(query, {"timeAgo": mapping[time_ago]["period"], "granularity": mapping[time_ago]["granularity"]})
 
     df_ts = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
 
@@ -168,11 +183,32 @@ if pinot_available:
 
     # CSS to inject contained in a string
     hide_table_row_index = """
-                <style>
-                thead tr th:first-child {display:none}
-                tbody th {display:none}
-                </style>
-                """
+    <style>
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
+    tbody tr th:first-child {display:none}
+    div.stMarkdown table.dataframe { 
+        width: 100%;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    div.stMarkdown table.dataframe thead tr {
+        text-align: center !important; 
+    }
+
+    div.stMarkdown table.dataframe, div.stMarkdown table.dataframe tbody tr td, div.stMarkdown table.dataframe thead tr th {
+        border:none
+    }
+
+    div.stMarkdown table.dataframe tbody tr, div.stMarkdown table.dataframe thead tr {
+        height: 75px;
+    }
+
+    div.stMarkdown table.dataframe tbody tr:nth-child(even) {
+        background: #efefef
+    }             
+    </style>
+    """
 
     # Inject CSS with Markdown
     st.markdown(hide_table_row_index, unsafe_allow_html=True)

@@ -36,12 +36,6 @@ if not "auto_refresh" in st.session_state:
     st.session_state.auto_refresh = True
 
 mapping = {
-    "1 hour": "PT1H",
-    "10 minutes": "PT10M",
-    "5 minutes": "PT5M"
-}
-
-mapping2 = {
     "1 hour": {"period": "PT60M", "granularity": "minute"},
     "30 minutes": {"period": "PT30M", "granularity": "minute"},
     "10 minutes": {"period": "PT10M", "granularity": "second"},
@@ -59,7 +53,7 @@ with st.expander("Configure Dashboard", expanded=True):
             st.session_state.sleep_time = number
 
     with right:
-            time_ago = st.radio("Time period to cover", mapping2.keys(), horizontal=True, key="time_ago")
+            time_ago = st.radio("Time period to cover", mapping.keys(), horizontal=True, key="time_ago")
 
 curs = conn.cursor()
 
@@ -86,7 +80,7 @@ if pinot_available:
     limit 1
     """
     
-    curs.execute(query, {"timeAgo": mapping2[time_ago]["period"]})
+    curs.execute(query, {"timeAgo": mapping[time_ago]["period"]})
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
 
@@ -128,7 +122,7 @@ if pinot_available:
     LIMIT 10000
     """
 
-    curs.execute(query, {"timeAgo": mapping2[time_ago]["period"], "granularity": mapping2[time_ago]["granularity"]})
+    curs.execute(query, {"timeAgo": mapping[time_ago]["period"], "granularity": mapping[time_ago]["granularity"]})
 
     df_ts = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
 
@@ -148,7 +142,7 @@ if pinot_available:
                 go.Scatter(x=revenue_complete.dateMin, y=revenue_complete.value, mode='lines', line={'dash': 'solid', 'color': 'green'}),
                 go.Scatter(x=revenue_incomplete.dateMin, y=revenue_incomplete.value, mode='lines', line={'dash': 'dash', 'color': 'green'}),
             ])
-            fig.update_layout(showlegend=False, title=f"Orders per {mapping2[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
+            fig.update_layout(showlegend=False, title=f"Orders per {mapping[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
             fig.update_yaxes(range=[0, df_ts["orders"].max() * 1.1])
             st.plotly_chart(fig, use_container_width=True) 
 
@@ -164,7 +158,7 @@ if pinot_available:
                 go.Scatter(x=revenue_complete.dateMin, y=revenue_complete.value, mode='lines', line={'dash': 'solid', 'color': 'blue'}),
                 go.Scatter(x=revenue_incomplete.dateMin, y=revenue_incomplete.value, mode='lines', line={'dash': 'dash', 'color': 'blue'}),
             ])
-            fig.update_layout(showlegend=False, title=f"Revenue per {mapping2[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
+            fig.update_layout(showlegend=False, title=f"Revenue per {mapping[time_ago]['granularity']}", margin=dict(l=0, r=0, t=40, b=0),)
             fig.update_yaxes(range=[0, df_ts["revenue"].max() * 1.1])
             st.plotly_chart(fig, use_container_width=True) 
 
@@ -215,7 +209,7 @@ if pinot_available:
         group by product, image
         ORDER BY count(*) DESC
         LIMIT 5
-        """, {"timeAgo": mapping2[time_ago]["period"]})
+        """, {"timeAgo": mapping[time_ago]["period"]})
 
         df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
@@ -235,7 +229,7 @@ if pinot_available:
         group by category
         ORDER BY count(*) DESC
         LIMIT 5
-        """, {"timeAgo": mapping2[time_ago]["period"]})
+        """, {"timeAgo": mapping[time_ago]["period"]})
 
         df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])
         df["quantityPerOrder"] = df["quantity"] / df["orders"]
@@ -255,6 +249,8 @@ if pinot_available:
     st.subheader("Latest Orders")
 
     html = convert_df(df)
+
+
 
     st.markdown(
         html,

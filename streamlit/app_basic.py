@@ -154,11 +154,32 @@ if pinot_available:
 
     # CSS to inject contained in a string
     hide_table_row_index = """
-                <style>
-                thead tr th:first-child {display:none}
-                tbody th {display:none}
-                </style>
-                """
+    <style>
+    thead tr th:first-child {display:none}
+    tbody th {display:none}
+    tbody tr th:first-child {display:none}
+    div.stMarkdown table.dataframe { 
+        width: 100%;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    div.stMarkdown table.dataframe thead tr {
+        text-align: center !important; 
+    }
+
+    div.stMarkdown table.dataframe, div.stMarkdown table.dataframe tbody tr td, div.stMarkdown table.dataframe thead tr th {
+        border:none
+    }
+
+    div.stMarkdown table.dataframe tbody tr, div.stMarkdown table.dataframe thead tr {
+        height: 75px;
+    }
+
+    div.stMarkdown table.dataframe tbody tr:nth-child(even) {
+        background: #efefef
+    }             
+    </style>
+    """
 
     # Inject CSS with Markdown
     st.markdown(hide_table_row_index, unsafe_allow_html=True)
