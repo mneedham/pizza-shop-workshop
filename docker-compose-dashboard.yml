@@ -1,0 +1,31 @@
+version: "3"
+services:
+  dashboard-basic:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard-basic
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit/app_basic.py:/workdir/app.py
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT
+    networks:
+      - pizza-shop
+  dashboard-refresh:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard-refresh
+    ports:
+      - "8502:8501"
+    volumes:
+      - ./streamlit/app.py:/workdir/app.py
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT
+    networks:
+      - pizza-shop
+networks:
+  pizza-shop:
+    name: pizza-shop

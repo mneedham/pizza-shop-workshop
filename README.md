@@ -125,8 +125,18 @@ order by ts DESC
 limit 10
 ```
 
+## Part 4
 
+Now let's add a dashboard populated by Pinot queries.
 
+```bash
+docker compose -f docker-compose-dashboard.yml up -d
+```
+
+Navigate to:
+
+* http://localhost:8501 to see the basic dashboard
+* http://localhost:8501 to see the auto-refreshing dashboard
 
 
 ## Extra
