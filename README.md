@@ -112,7 +112,7 @@ View the table config:
 pygmentize pinot/config/orders/table.json | less
 ```
 
-Add Pinot:
+Start Pinot:
 
 ```bash
 docker compose -f docker-compose-pinot.yml up -d
