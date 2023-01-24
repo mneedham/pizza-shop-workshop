@@ -174,6 +174,175 @@ pygmentize streamlit/app.py
 
 Navigate to http://localhost:8501 to see the auto-refreshing dashboard
 
+## Part 5
+
+Add Debezium to the estate
+
+```bash
+docker-compose -f docker-compose-debezium.yml up -d
+```
+
+Stream MySQL changes into Kafka
+
+```bash
+curl -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors/mysql/config \
+    -d '{
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "mysql",
+    "database.port": 3306,
+    "database.user": "debezium",
+    "database.password": "dbz",
+    "database.server.name": "mysql",
+    "database.server.id": "223344",
+    "database.allowPublicKeyRetrieval": true,
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.history.kafka.topic": "mysql-history",
+    "database.include.list": "pizzashop",
+    "time.precision.mode": "connect",
+    "include.schema.changes": false
+ }'
+ ```
+
+## Part 6
+
+Adding Flink to the estate
+
+
+```bash
+docker compose -f docker-compose-flink.yml up -d
+```
+
+Connect to Flink's CLI:
+
+```bash
+docker exec -it flink-sql-client /opt/sql-client/sql-client.sh
+```
+
+Create orders table:
+
+```sql
+CREATE TABLE Orders (
+  `event_time` TIMESTAMP(3) METADATA FROM 'timestamp',
+  `partition` BIGINT METADATA VIRTUAL,
+  `offset` BIGINT METADATA VIRTUAL,
+  `id` STRING,
+  `userId` STRING,
+  `price` DOUBLE,
+  `items` ARRAY<ROW(`productId` STRING, `quantity` BIGINT, `price` DOUBLE)>,
+  `deliveryLat` DOUBLE,
+  `deliveryLon` DOUBLE,
+  `createdAt` STRING
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'orders',
+  'properties.bootstrap.servers' = 'kafka:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'json'
+);
+```
+
+Query orders:
+
+```sql
+select id, userId, productId, quantity, t.price 
+FROM Orders
+CROSS JOIN UNNEST(items) AS t (productId, quantity, price);
+```
+
+Create products table:
+
+```sql
+CREATE TABLE Products (
+  `event_time` TIMESTAMP(3) METADATA FROM 'timestamp',
+  `partition` BIGINT METADATA VIRTUAL,
+  `offset` BIGINT METADATA VIRTUAL,
+  `id` STRING,
+  `name` STRING,
+  `description` STRING,
+  `category` STRING,
+  `price` DOUBLE,
+  `image` STRING,
+  `createdAt` STRING
+
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'mysql.pizzashop.products',
+  'properties.bootstrap.servers' = 'kafka:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'debezium-json',
+  'debezium-json.schema-include' = 'true'
+);
+```
+
+Join orders and products:
+
+```sql
+select Orders.id AS orderId, 
+       Orders.createdAt AS createdAt,
+       ROW(
+        'productId', orderItem.productId, 
+        'quantity', orderItem.quantity, 
+        'price', orderItem.price
+       ) AS orderItem,
+       ROW(
+        'id', Products.id, 
+        'name', Products.name, 
+        'description', Products.description, 
+        'category', Products.category,
+        'image', Products.image,
+        'price', Products.price
+       ) AS product
+FROM Orders
+CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
+JOIN Products ON Products.id = orderItem.productId;
+```
+
+Export as enriched order items:
+
+```sql
+CREATE TABLE EnrichedOrderItems (
+  `orderId` STRING,
+  `createdAt` STRING,
+  `orderItem` MAP<STRING,STRING>,
+  `product` MAP<STRING,STRING>,
+   PRIMARY KEY (orderId) NOT ENFORCED
+) WITH (
+  'connector' = 'upsert-kafka',
+  'topic' = 'enriched-order-items',
+  'properties.bootstrap.servers' = 'kafka:9092',
+  'properties.group.id' = 'testGroup',
+  'value.format' = 'json',
+  'key.format' = 'json'
+);
+```
+
+Ingest joined data:
+
+```sql
+INSERT INTO EnrichedOrderItems
+select 
+  Orders.id AS orderId, 
+  Orders.createdAt AS createdAt,
+  MAP[
+    'productId', CAST(orderItem.productId AS STRING),
+    'quantity', CAST(orderItem.quantity AS STRING),
+    'price', CAST(orderItem.price AS STRING)
+   ] AS orderItem,
+  MAP[
+    'id', CAST(Products.id AS STRING),
+    'name', CAST(Products.name AS STRING),
+    'description', CAST(Products.description AS STRING),
+    'category', CAST(Products.category AS STRING),
+    'image', CAST(Products.image AS STRING),
+    'price', CAST(Products.price AS STRING)
+   ] AS product
+FROM Orders
+CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
+JOIN Products ON Products.id = orderItem.productId;
+```
+
 
 ## Extra
 
@@ -182,3 +351,46 @@ If I get time:
 * Update to use Swedish pizzas 
     * https://www.foodora.se/en/restaurant/o4ep/bella-pizza-by-foodle-city
     * https://www.foodora.se/en/restaurant/nq4i/4-corners-pizza-ostermalmshallen
+
+* Nested JSON in Flink
+
+```bash
+CREATE TABLE Products2 (
+  `payload` ROW<
+    `after` ROW<
+      `id` STRING,
+      `name` STRING
+    >
+  >
+
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'mysql.pizzashop.products',
+  'properties.bootstrap.servers' = 'kafka:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'json'
+);
+```
+
+```sql
+INSERT INTO EnrichedOrderItems
+select Orders.id AS orderId, 
+       Orders.createdAt AS createdAt,
+       ROW(
+        "orderItem.productId", "orderItem.productId",
+        "orderItem.quantity", "orderItem.quantity",
+        "orderItem.price", "orderItem.price"
+       ) AS orderItem,
+       ROW(
+        'id', Products.id, 
+        'name', Products.name, 
+        'description', Products.description, 
+        'category', Products.category,
+        'image', Products.image,
+        'price', Products.price
+       ) AS product
+FROM Orders
+CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
+JOIN Products ON Products.id = orderItem.productId;
+```

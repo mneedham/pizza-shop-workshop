@@ -1,0 +1,19 @@
+version: "3"
+services:
+  debezium:
+    image: debezium/connect:1.8
+    hostname: debezium
+    container_name: debezium
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+    ports:
+      - 8083:8083
+    healthcheck: {test: curl -f localhost:8083, interval: 1s, start_period: 120s}
+    networks:
+      - pizza-shop
+networks:
+  pizza-shop:
+    name: pizza-shop
