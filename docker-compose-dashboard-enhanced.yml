@@ -1,0 +1,18 @@
+version: "3"
+services:
+  dashboard-enhanced:
+    build: streamlit
+    restart: unless-stopped
+    container_name: dashboard-enhanced
+    ports:
+      - "8503:8501"
+    volumes:
+      - ./streamlit/app_enriched.py:/workdir/app.py
+    environment:
+      - PINOT_SERVER
+      - PINOT_PORT
+    networks:
+      - pizza-shop
+networks:
+  pizza-shop:
+    name: pizza-shop

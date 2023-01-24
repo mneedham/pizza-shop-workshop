@@ -344,6 +344,35 @@ CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
 JOIN Products ON Products.id = orderItem.productId;
 ```
 
+We can then query the `enriched-order-items` stream:
+
+```bash
+kcat -C -b localhost:29092 -t enriched-order-items -c1 | jq
+```
+
+## Part 7
+
+Now let's add an enhanched dashboard, but first we'll add the `order_items_enriched` table:
+
+```bash
+docker run \
+  -v $PWD/pinot/config:/config \
+  --network pizza-shop \
+  apachepinot/pinot:0.11.0-arm64 \
+  AddTable \
+  -schemaFile /config/order_items_enriched/schema.json \
+  -tableConfigFile /config/order_items_enriched/table.json \
+  -controllerHost pinot-controller \
+  -exec
+```
+
+And now the dashboard:
+
+```bash
+docker compose -f docker-compose-dashboard-enhanced.yml up -d
+```
+
+Navigate to http://localhost:8503
 
 ## Extra
 

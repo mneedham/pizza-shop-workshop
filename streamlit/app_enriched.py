@@ -238,7 +238,7 @@ if pinot_available:
         st.markdown(html, unsafe_allow_html=True)
 
     curs.execute("""
-    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS dateTime, status, price, userId, productsOrdered, totalQuantity
+    SELECT ToDateTime(ts, 'HH:mm:ss:SSS') AS dateTime, price, userId, productsOrdered, totalQuantity
     FROM orders
     ORDER BY ts DESC
     LIMIT 10
