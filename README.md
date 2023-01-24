@@ -362,6 +362,11 @@ kcat -C -b localhost:29092 -t enriched-order-items -c1 | jq
 Now let's add an enhanched dashboard, but first we'll add the `order_items_enriched` table:
 
 ```bash
+pygmentize pinot/config/order_items_enriched/schema.json | less
+pygmentize pinot/config/order_items_enriched/table.json | less
+```
+
+```bash
 docker run \
   -v $PWD/pinot/config:/config \
   --network pizza-shop \
