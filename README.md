@@ -279,21 +279,22 @@ CREATE TABLE Products (
 Join orders and products:
 
 ```sql
-select Orders.id AS orderId, 
-       Orders.createdAt AS createdAt,
-       ROW(
-        'productId', orderItem.productId, 
-        'quantity', orderItem.quantity, 
-        'price', orderItem.price
-       ) AS orderItem,
-       ROW(
-        'id', Products.id, 
-        'name', Products.name, 
-        'description', Products.description, 
-        'category', Products.category,
-        'image', Products.image,
-        'price', Products.price
-       ) AS product
+select 
+  Orders.id AS orderId, 
+  Orders.createdAt AS createdAt,
+  MAP[
+    'productId', CAST(orderItem.productId AS STRING),
+    'quantity', CAST(orderItem.quantity AS STRING),
+    'price', CAST(orderItem.price AS STRING)
+   ] AS orderItem,
+  MAP[
+    'id', CAST(Products.id AS STRING),
+    'name', CAST(Products.name AS STRING),
+    'description', CAST(Products.description AS STRING),
+    'category', CAST(Products.category AS STRING),
+    'image', CAST(Products.image AS STRING),
+    'price', CAST(Products.price AS STRING)
+   ] AS product
 FROM Orders
 CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
 JOIN Products ON Products.id = orderItem.productId;
