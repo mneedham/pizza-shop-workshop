@@ -344,6 +344,13 @@ CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
 JOIN Products ON Products.id = orderItem.productId;
 ```
 
+Let's check if we have any items:
+
+```sql
+SELECT * 
+FROM EnrichedOrderItems;
+```
+
 We can then query the `enriched-order-items` stream:
 
 ```bash

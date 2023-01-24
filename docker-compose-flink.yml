@@ -41,6 +41,7 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 30
+        taskmanager.memory.managed.size: 1000MB
     volumes:
       - ./flink/settings/:/settings
       - ./flink/data/:/data
