@@ -201,7 +201,13 @@ curl -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors
     "time.precision.mode": "connect",
     "include.schema.changes": false
  }'
- ```
+```
+
+Products will be written to the `mysql.pizzashop.products` topic. 
+
+```bash
+kcat -C -b localhost:29092 -t mysql.pizzashop.products | jq
+```
 
 ## Part 6
 
@@ -272,8 +278,15 @@ CREATE TABLE Products (
   'properties.group.id' = 'testGroup',
   'scan.startup.mode' = 'earliest-offset',
   'format' = 'debezium-json',
-  'debezium-json.schema-include' = 'true'
+  'debezium-json.schema-include' = 'false'
 );
+```
+
+Query products:
+
+```sql
+SELECT * 
+FROM Products;
 ```
 
 Join orders and products:
@@ -344,17 +357,16 @@ CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
 JOIN Products ON Products.id = orderItem.productId;
 ```
 
-Let's check if we have any items:
-
-```sql
-SELECT * 
-FROM EnrichedOrderItems;
-```
-
 We can then query the `enriched-order-items` stream:
 
 ```bash
 kcat -C -b localhost:29092 -t enriched-order-items -c1 | jq
+```
+
+Query from the end of the stream:
+
+```bash
+kcat -C -b localhost:29092 -t enriched-order-items -o end | jq -c
 ```
 
 ## Part 7

@@ -9,6 +9,7 @@ services:
       GROUP_ID: 1
       CONFIG_STORAGE_TOPIC: connect_configs
       OFFSET_STORAGE_TOPIC: connect_offsets
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: false
     ports:
       - 8083:8083
     healthcheck: {test: curl -f localhost:8083, interval: 1s, start_period: 120s}

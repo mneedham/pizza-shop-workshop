@@ -23,7 +23,6 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
-        taskmanager.numberOfTaskSlots: 30
     volumes:
       - ./flink/settings/:/settings
       - ./flink/data/:/data
@@ -40,8 +39,7 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
-        taskmanager.numberOfTaskSlots: 30
-        taskmanager.memory.managed.size: 1000MB
+        taskmanager.numberOfTaskSlots: 1
     volumes:
       - ./flink/settings/:/settings
       - ./flink/data/:/data
