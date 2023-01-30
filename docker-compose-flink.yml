@@ -40,9 +40,19 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 1
+        taskmanager.memory.flink.size: 1500mb
+        taskmanager.memory.process.size: 2gb
+        taskmanager.memory.task.heap.size: 512mb
+        env.java.opts.taskmanager: "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/heapdumps"
+        state.backend: rocksdb
+        state.backend.incremental: true
+        state.checkpoints.dir: file:///rocksdb/checkpoints
+        state.backend.rocksdb.localdir: /rocksdb/local
     volumes:
       - ./flink/settings/:/settings
       - ./flink/data/:/data
+      - ./flink/heapdumps:/heapdumps
+      - ./flink/rocksdb:/rocksdb
     networks:
       - pizza-shop
 networks:
