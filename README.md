@@ -1,5 +1,7 @@
 # Pizza Shop Workshop
 
+This is a workshop where attendees learn how to build a Real-Time analytics dashboard for an imaginary pizza service. It acts as an introduction to the components of the Real-Time Analytics Stack. 
+
 ## Pre Requisites
 
 * Install kcat - https://docs.confluent.io/platform/current/app-development/kafkacat-usage.html
