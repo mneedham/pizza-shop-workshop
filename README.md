@@ -17,7 +17,7 @@ pip install Pygments
 Set up Kafka and MySQL
 
 ```bash
-pygmentize docker-compose-base.yml | less
+pygmentize -O style=github-dark docker-compose-base.yml | less
 ```
 
 ```bash
@@ -75,14 +75,14 @@ docker exec -it kafka \
 Let's have a look at the Orders Service Simulator
 
 ```bash
-pygmentize orders-service/multiseeder.py | less
+pygmentize -O style=github-dark orders-service/multiseeder.py | less
 ```
 
 And its accompanying Dockerfile and docker-compose files:
 
 ```bash
-pygmentize orders-service/Dockerfile
-pygmentize docker-compose-orders.yml | less
+pygmentize -O style=github-dark orders-service/Dockerfile
+pygmentize -O style=github-dark docker-compose-orders.yml | less
 ```
 
 Now let's connect the simulator to our estate:
@@ -103,13 +103,13 @@ Now let's get this data into Apache Pinot.
 View the schema:
 
 ```bash
-pygmentize pinot/config/orders/schema.json | less
+pygmentize -O style=github-dark pinot/config/orders/schema.json | less
 ```
 
 View the table config:
 
 ```bash
-pygmentize pinot/config/orders/table.json | less
+pygmentize -O style=github-dark pinot/config/orders/table.json | less
 ```
 
 Start Pinot:
@@ -161,7 +161,7 @@ docker compose -f docker-compose-dashboard.yml up -d
 Let's first look at the basic dashboard:
 
 ```bash
-pygmentize streamlit/app_basic.py
+pygmentize -O style=github-dark streamlit/app_basic.py
 ```
 
 Navigate to http://localhost:8501 to see the basic dashboard
@@ -169,7 +169,7 @@ Navigate to http://localhost:8501 to see the basic dashboard
 And now the auto refreshing dashboard:
 
 ```bash
-pygmentize streamlit/app.py
+pygmentize -O style=github-dark streamlit/app.py
 ```
 
 Navigate to http://localhost:8501 to see the auto-refreshing dashboard
@@ -177,6 +177,10 @@ Navigate to http://localhost:8501 to see the auto-refreshing dashboard
 ## Part 5
 
 Add Debezium to the estate
+
+```bash
+pygmentize -O style=github-dark docker-compose-debezium.yml | less
+```
 
 ```bash
 docker-compose -f docker-compose-debezium.yml up -d
@@ -213,6 +217,9 @@ kcat -C -b localhost:29092 -t mysql.pizzashop.products | jq
 
 Adding Flink to the estate
 
+```bash
+pygmentize -O style=github-dark docker-compose-flink.yml
+```
 
 ```bash
 docker compose -f docker-compose-flink.yml up -d
@@ -270,7 +277,6 @@ CREATE TABLE Products (
   `price` DOUBLE,
   `image` STRING,
   `createdAt` STRING
-
 ) WITH (
   'connector' = 'kafka',
   'topic' = 'mysql.pizzashop.products',
@@ -374,8 +380,8 @@ kcat -C -b localhost:29092 -t enriched-order-items -o end | jq -c
 Now let's add an enhanched dashboard, but first we'll add the `order_items_enriched` table:
 
 ```bash
-pygmentize pinot/config/order_items_enriched/schema.json | less
-pygmentize pinot/config/order_items_enriched/table.json | less
+pygmentize -O style=github-dark pinot/config/order_items_enriched/schema.json | less
+pygmentize -O style=github-dark pinot/config/order_items_enriched/table.json | less
 ```
 
 ```bash
