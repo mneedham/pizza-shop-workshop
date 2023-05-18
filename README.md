@@ -174,7 +174,7 @@ And now the auto refreshing dashboard:
 pygmentize -O style=github-dark streamlit/app.py
 ```
 
-Navigate to http://localhost:8501 to see the auto-refreshing dashboard
+Navigate to http://localhost:8502 to see the auto-refreshing dashboard
 
 ## Part 5
 
