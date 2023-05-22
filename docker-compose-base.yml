@@ -30,7 +30,7 @@ services:
     networks:
       - pizza-shop
   kafka:
-    image: confluentinc/cp-kafka:7.1.0
+    image: confluentinc/cp-kafka:7.4.0
     hostname: kafka
     container_name: kafka
     ports:

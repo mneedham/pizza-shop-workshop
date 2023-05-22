@@ -23,9 +23,7 @@
         }
     },
     "ingestionConfig": {
-        "complexTypeConfig": {
-            "delimeter": "."
-        },
+
         "transformConfigs": [
             {
                 "columnName": "ts",
@@ -42,9 +40,5 @@
         ]
     },
     "metadata": {
-        "customConfigs": {}
-    },
-    "routing": {
-        "instanceSelectorType": "strictReplicaGroup"
     }
 }
