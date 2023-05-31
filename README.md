@@ -61,7 +61,7 @@ docker exec -it kafka \
 Metadata for that topic:
 
 ```bash
-kcat -L -b localhost:29092 -t orders4
+kcat -L -b localhost:29092 -t orders
 ```
 
 ```bash
@@ -127,7 +127,7 @@ Create the table:
 docker run \
   -v $PWD/pinot/config:/config \
   --network pizza-shop \
-  apachepinot/pinot:0.11.0-arm64 \
+  apachepinot/pinot:0.12.0-arm64 \
   AddTable \
   -schemaFile /config/orders/schema.json \
   -tableConfigFile /config/orders/table.json \
@@ -175,7 +175,7 @@ And now the auto refreshing dashboard:
 pygmentize -O style=github-dark streamlit/app.py
 ```
 
-Navigate to http://localhost:8501 to see the auto-refreshing dashboard
+Navigate to http://localhost:8502 to see the auto-refreshing dashboard
 
 ## Part 5
 
@@ -221,11 +221,11 @@ kcat -C -b localhost:29092 -t mysql.pizzashop.products | jq
 Adding Flink to the estate
 
 ```bash
-pygmentize -O style=github-dark docker-compose-flink.yml
+pygmentize -O style=github-dark docker-compose-rwave.yml
 ```
 
 ```bash
-docker compose -f docker-compose-flink.yml up -d
+docker compose -f docker-compose-rwave.yml up -d
 ```
 
 Connect to Flink's CLI:
