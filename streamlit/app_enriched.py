@@ -12,7 +12,6 @@ from dateutil import parser
 def path_to_image_html(path):
     return '<img src="' + path + '" width="60" >'
 
-@st.cache
 def convert_df(input_df):
      return input_df.to_html(escape=False, formatters=dict(image=path_to_image_html))
 
@@ -35,7 +34,7 @@ if not "sleep_time" in st.session_state:
 if not "auto_refresh" in st.session_state:
     st.session_state.auto_refresh = True
 
-mapping2 = {
+mapping = {
     "1 hour": {"period": "PT60M", "previousPeriod": "PT120M", "granularity": "minute"},
     "30 minutes": {"period": "PT30M", "previousPeriod": "PT60M", "granularity": "minute"},
     "10 minutes": {"period": "PT10M", "previousPeriod": "PT20M", "granularity": "second"},
@@ -82,8 +81,8 @@ if pinot_available:
     """
     
     curs.execute(query, {
-        "timeAgo": mapping2[time_ago]["previousPeriod"],
-        "nearTimeAgo": mapping2[time_ago]["period"]
+        "timeAgo": mapping[time_ago]["previousPeriod"],
+        "nearTimeAgo": mapping[time_ago]["period"]
     })
 
     df = pd.DataFrame(curs, columns=[item[0] for item in curs.description])

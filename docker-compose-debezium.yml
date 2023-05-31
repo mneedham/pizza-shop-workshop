@@ -1,7 +1,7 @@
 version: "3"
 services:
   debezium:
-    image: debezium/connect:1.8
+    image: debezium/connect:2.3
     hostname: debezium
     container_name: debezium
     environment:

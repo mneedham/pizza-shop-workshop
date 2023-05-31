@@ -204,10 +204,13 @@ curl -X PUT -H  "Content-Type:application/json" http://localhost:8083/connectors
     "database.allowPublicKeyRetrieval": true,
     "database.history.kafka.bootstrap.servers": "kafka:9092",
     "database.history.kafka.topic": "mysql-history",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",    
+    "schema.history.internal.kafka.topic": "mysql-schema-history",
     "database.include.list": "pizzashop",
     "time.precision.mode": "connect",
+    "topic.prefix": "mysql",
     "include.schema.changes": false
- }'
+}'
 ```
 
 Products will be written to the `mysql.pizzashop.products` topic. 
@@ -228,7 +231,7 @@ pygmentize -O style=github-dark docker-compose-rwave.yml
 docker compose -f docker-compose-rwave.yml up -d
 ```
 
-Connect to Flink's CLI:
+Connect to the psql CLI:
 
 ```bash
 psql -h localhost -p 4566 -d dev -U root
@@ -252,7 +255,7 @@ CREATE SOURCE IF NOT EXISTS orders (
 WITH (
    connector='kafka',
    topic='orders',
-   properties.bootstrap.server='redpanda:29092',
+   properties.bootstrap.server='kafka:9092',
    scan.startup.mode='earliest',
    scan.startup.timestamp_millis='140000000'
 )
@@ -262,9 +265,15 @@ ROW FORMAT JSON;
 Query orders:
 
 ```sql
-select id, userId, productId, quantity, t.price 
-FROM Orders
-CROSS JOIN UNNEST(items) AS t (productId, quantity, price);
+WITH orderItems AS (
+    select unnest(items) AS "orderItem",
+           id AS "orderId", createdAt           
+    FROM orders
+)
+select id, orders.createdat, orderItems.*
+FROM orders
+JOIN orderItems ON orderItems."orderId" = orders.id
+LIMIT 10;
 ```
 
 Create products table:
@@ -281,7 +290,7 @@ CREATE SOURCE IF NOT EXISTS products (
 WITH (
    connector='kafka',
    topic='products',
-   properties.bootstrap.server='redpanda:29092',
+   properties.bootstrap.server='kafka:9092',
    scan.startup.mode='earliest',
    scan.startup.timestamp_millis='140000000'
 )
@@ -300,16 +309,17 @@ Join orders and products:
 ```sql
 WITH orderItems AS (
     select unnest(items) AS orderItem, 
-           id AS "orderId", createdAt           
+           id AS "orderId", "createdAt           |
     FROM orders
 )
-SELECT "orderId", createdAt,
+SELECT "orderId", "createdAt",
        ((orderItem).productid, (orderItem).quantity, (orderItem).price)::
        STRUCT<productId varchar, quantity varchar, price varchar> AS "orderItem",
         (products.id, products.name, products.description, products.category, products.image, products.price)::
         STRUCT<id varchar, name varchar, description varchar, category varchar, image varchar, price varchar> AS product
 FROM orderItems
-JOIN products ON products.id = (orderItem).productId;
+JOIN products ON products.id = (orderItem).productId
+LIMIT 10;
 ```
 
 Export as materialized view:
@@ -318,10 +328,10 @@ Export as materialized view:
 CREATE MATERIALIZED VIEW orderItems_view AS
 WITH orderItems AS (
     select unnest(items) AS orderItem, 
-           id AS "orderId", createdAt           
+           id AS "orderId", createdAt AS "createdAt"
     FROM orders
 )
-SELECT "orderId", createdAt,
+SELECT "orderId", "createdAt",
        ((orderItem).productid, (orderItem).quantity, (orderItem).price)::
        STRUCT<productId varchar, quantity varchar, price varchar> AS "orderItem",
         (products.id, products.name, products.description, products.category, products.image, products.price)::
@@ -337,7 +347,7 @@ CREATE SINK enrichedOrderItems_sink FROM orderItems_view
 WITH (
    connector='kafka',
    type='append-only',
-   properties.bootstrap.server='kafka:29092',
+   properties.bootstrap.server='kafka:9092',
    topic='enriched-order-items'
 );
 ```
@@ -367,7 +377,7 @@ pygmentize -O style=github-dark pinot/config/order_items_enriched/table.json | l
 docker run \
   -v $PWD/pinot/config:/config \
   --network pizza-shop \
-  apachepinot/pinot:0.11.0-arm64 \
+  apachepinot/pinot:0.12.0-arm64 \
   AddTable \
   -schemaFile /config/order_items_enriched/schema.json \
   -tableConfigFile /config/order_items_enriched/table.json \
@@ -382,54 +392,3 @@ docker compose -f docker-compose-dashboard-enhanced.yml up -d
 ```
 
 Navigate to http://localhost:8503
-
-## Extra
-
-If I get time:
-
-* Update to use Swedish pizzas 
-    * https://www.foodora.se/en/restaurant/o4ep/bella-pizza-by-foodle-city
-    * https://www.foodora.se/en/restaurant/nq4i/4-corners-pizza-ostermalmshallen
-
-* Nested JSON in Flink
-
-```bash
-CREATE TABLE Products2 (
-  `payload` ROW<
-    `after` ROW<
-      `id` STRING,
-      `name` STRING
-    >
-  >
-
-) WITH (
-  'connector' = 'kafka',
-  'topic' = 'mysql.pizzashop.products',
-  'properties.bootstrap.servers' = 'kafka:9092',
-  'properties.group.id' = 'testGroup',
-  'scan.startup.mode' = 'earliest-offset',
-  'format' = 'json'
-);
-```
-
-```sql
-INSERT INTO EnrichedOrderItems
-select Orders.id AS orderId, 
-       Orders.createdAt AS createdAt,
-       ROW(
-        "orderItem.productId", "orderItem.productId",
-        "orderItem.quantity", "orderItem.quantity",
-        "orderItem.price", "orderItem.price"
-       ) AS orderItem,
-       ROW(
-        'id', Products.id, 
-        'name', Products.name, 
-        'description', Products.description, 
-        'category', Products.category,
-        'image', Products.image,
-        'price', Products.price
-       ) AS product
-FROM Orders
-CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
-JOIN Products ON Products.id = orderItem.productId;
-```
