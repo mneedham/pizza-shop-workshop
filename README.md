@@ -6,6 +6,7 @@ This is a workshop where attendees learn how to build a Real-Time analytics dash
 
 * Install kcat - https://docs.confluent.io/platform/current/app-development/kafkacat-usage.html
 * Install jq - https://github.com/edenhill/kcat
+* Install psql - https://www.timescale.com/blog/how-to-install-psql-on-mac-ubuntu-debian-windows/
 
 I'm using Pygmentize to view each of the files, but you can just view them in an editor.
 You can install Pygmentize by running the following:
