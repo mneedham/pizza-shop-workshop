@@ -218,7 +218,7 @@ kcat -C -b localhost:29092 -t mysql.pizzashop.products | jq
 
 ## Part 6
 
-Adding Flink to the estate
+Adding RisingWave to the estate
 
 ```bash
 pygmentize -O style=github-dark docker-compose-rwave.yml
@@ -231,31 +231,32 @@ docker compose -f docker-compose-rwave.yml up -d
 Connect to Flink's CLI:
 
 ```bash
-docker exec -it flink-sql-client /opt/sql-client/sql-client.sh
+psql -h localhost -p 4566 -d dev -U root
 ```
 
 Create orders table:
 
 ```sql
-CREATE TABLE Orders (
-  `event_time` TIMESTAMP(3) METADATA FROM 'timestamp',
-  `partition` BIGINT METADATA VIRTUAL,
-  `offset` BIGINT METADATA VIRTUAL,
-  `id` STRING,
-  `userId` STRING,
-  `price` DOUBLE,
-  `items` ARRAY<ROW(`productId` STRING, `quantity` BIGINT, `price` DOUBLE)>,
-  `deliveryLat` DOUBLE,
-  `deliveryLon` DOUBLE,
-  `createdAt` STRING
-) WITH (
-  'connector' = 'kafka',
-  'topic' = 'orders',
-  'properties.bootstrap.servers' = 'kafka:9092',
-  'properties.group.id' = 'testGroup',
-  'scan.startup.mode' = 'earliest-offset',
-  'format' = 'json'
-);
+CREATE SOURCE IF NOT EXISTS orders (
+    id varchar,
+    createdAt TIMESTAMP,
+    userId integer,
+    status varchar,
+    price double,
+    items STRUCT <
+      productId varchar,
+      quantity integer,
+      price double
+    >[]
+)
+WITH (
+   connector='kafka',
+   topic='orders',
+   properties.bootstrap.server='redpanda:29092',
+   scan.startup.mode='earliest',
+   scan.startup.timestamp_millis='140000000'
+)
+ROW FORMAT JSON;
 ```
 
 Query orders:
@@ -269,26 +270,22 @@ CROSS JOIN UNNEST(items) AS t (productId, quantity, price);
 Create products table:
 
 ```sql
-CREATE TABLE Products (
-  `event_time` TIMESTAMP(3) METADATA FROM 'timestamp',
-  `partition` BIGINT METADATA VIRTUAL,
-  `offset` BIGINT METADATA VIRTUAL,
-  `id` STRING,
-  `name` STRING,
-  `description` STRING,
-  `category` STRING,
-  `price` DOUBLE,
-  `image` STRING,
-  `createdAt` STRING
-) WITH (
-  'connector' = 'kafka',
-  'topic' = 'mysql.pizzashop.products',
-  'properties.bootstrap.servers' = 'kafka:9092',
-  'properties.group.id' = 'testGroup',
-  'scan.startup.mode' = 'earliest-offset',
-  'format' = 'debezium-json',
-  'debezium-json.schema-include' = 'false'
-);
+CREATE SOURCE IF NOT EXISTS products (
+    id varchar,
+    name varchar,
+    description varchar,
+    category varchar,
+    price double,
+    image varchar
+)
+WITH (
+   connector='kafka',
+   topic='products',
+   properties.bootstrap.server='redpanda:29092',
+   scan.startup.mode='earliest',
+   scan.startup.timestamp_millis='140000000'
+)
+ROW FORMAT JSON;
 ```
 
 Query products:
@@ -301,69 +298,48 @@ FROM Products;
 Join orders and products:
 
 ```sql
-select 
-  Orders.id AS orderId, 
-  Orders.createdAt AS createdAt,
-  MAP[
-    'productId', CAST(orderItem.productId AS STRING),
-    'quantity', CAST(orderItem.quantity AS STRING),
-    'price', CAST(orderItem.price AS STRING)
-   ] AS orderItem,
-  MAP[
-    'id', CAST(Products.id AS STRING),
-    'name', CAST(Products.name AS STRING),
-    'description', CAST(Products.description AS STRING),
-    'category', CAST(Products.category AS STRING),
-    'image', CAST(Products.image AS STRING),
-    'price', CAST(Products.price AS STRING)
-   ] AS product
-FROM Orders
-CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
-JOIN Products ON Products.id = orderItem.productId;
+WITH orderItems AS (
+    select unnest(items) AS orderItem, 
+           id AS "orderId", createdAt           
+    FROM orders
+)
+SELECT "orderId", createdAt,
+       ((orderItem).productid, (orderItem).quantity, (orderItem).price)::
+       STRUCT<productId varchar, quantity varchar, price varchar> AS "orderItem",
+        (products.id, products.name, products.description, products.category, products.image, products.price)::
+        STRUCT<id varchar, name varchar, description varchar, category varchar, image varchar, price varchar> AS product
+FROM orderItems
+JOIN products ON products.id = (orderItem).productId;
 ```
 
-Export as enriched order items:
+Export as materialized view:
 
 ```sql
-CREATE TABLE EnrichedOrderItems (
-  `orderId` STRING,
-  `createdAt` STRING,
-  `orderItem` MAP<STRING,STRING>,
-  `product` MAP<STRING,STRING>,
-   PRIMARY KEY (orderId) NOT ENFORCED
-) WITH (
-  'connector' = 'upsert-kafka',
-  'topic' = 'enriched-order-items',
-  'properties.bootstrap.servers' = 'kafka:9092',
-  'properties.group.id' = 'testGroup',
-  'value.format' = 'json',
-  'key.format' = 'json'
+CREATE MATERIALIZED VIEW orderItems_view AS
+WITH orderItems AS (
+    select unnest(items) AS orderItem, 
+           id AS "orderId", createdAt           
+    FROM orders
+)
+SELECT "orderId", createdAt,
+       ((orderItem).productid, (orderItem).quantity, (orderItem).price)::
+       STRUCT<productId varchar, quantity varchar, price varchar> AS "orderItem",
+        (products.id, products.name, products.description, products.category, products.image, products.price)::
+        STRUCT<id varchar, name varchar, description varchar, category varchar, image varchar, price varchar> AS product
+FROM orderItems
+JOIN products ON products.id = (orderItem).productId;
+```
+
+Create sink:
+
+```sql
+CREATE SINK enrichedOrderItems_sink FROM orderItems_view 
+WITH (
+   connector='kafka',
+   type='append-only',
+   properties.bootstrap.server='kafka:29092',
+   topic='enriched-order-items'
 );
-```
-
-Ingest joined data:
-
-```sql
-INSERT INTO EnrichedOrderItems
-select 
-  Orders.id AS orderId, 
-  Orders.createdAt AS createdAt,
-  MAP[
-    'productId', CAST(orderItem.productId AS STRING),
-    'quantity', CAST(orderItem.quantity AS STRING),
-    'price', CAST(orderItem.price AS STRING)
-   ] AS orderItem,
-  MAP[
-    'id', CAST(Products.id AS STRING),
-    'name', CAST(Products.name AS STRING),
-    'description', CAST(Products.description AS STRING),
-    'category', CAST(Products.category AS STRING),
-    'image', CAST(Products.image AS STRING),
-    'price', CAST(Products.price AS STRING)
-   ] AS product
-FROM Orders
-CROSS JOIN UNNEST(items) AS orderItem (productId, quantity, price)
-JOIN Products ON Products.id = orderItem.productId;
 ```
 
 We can then query the `enriched-order-items` stream:

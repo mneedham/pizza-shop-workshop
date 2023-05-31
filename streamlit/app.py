@@ -6,13 +6,6 @@ import time
 import plotly.graph_objects as go 
 import os
 
-# mapping = {
-#     "1 hour": {"period": "PT60M", "granularity": "minute"},
-#     "30 minutes": {"period": "PT30M", "granularity": "minute"},
-#     "10 minutes": {"period": "PT10M", "granularity": "second"},
-#     "5 minutes": {"period": "PT5M", "granularity": "second"}
-# }
-
 mapping = {
     "1 hour": {"period": "PT60M", "previousPeriod": "PT120M", "granularity": "minute"},
     "30 minutes": {"period": "PT30M", "previousPeriod": "PT60M", "granularity": "minute"},
